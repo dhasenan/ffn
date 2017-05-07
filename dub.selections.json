@@ -1,0 +1,8 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"arsd-official": "~master",
+		"checkedint_andralex": "0.0.8",
+		"urld": "2.1.0"
+	}
+}

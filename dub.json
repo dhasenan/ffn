@@ -1,0 +1,11 @@
+{
+	"name": "fanficdownloader",
+	"description": "A minimal D application.",
+	"copyright": "Copyright © 2017, dhasenan",
+	"authors": ["dhasenan"],
+	"dependencies": {
+		"urld": "~>2.1.0",
+		"arsd-official:dom": "~master"
+	},
+	"stringImportPaths": ["import"]
+}
