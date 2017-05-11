@@ -26,11 +26,15 @@ class XenforoAdapter : Adapter
     {
         // ex:
         // /threads/with-this-ring-young-justice-si-thread-twelve.25032/page-2059
-        auto m = doc
-            .querySelectorAll("a.gt999")
-            .map!(x => x.innerText)
-            .map!(to!int);
-        auto count = reduce!((int a, int b) => max(a, b))(1, m);
+        int count = 1;
+        auto m = doc.querySelectorAll("div.PageNav");
+        foreach (nav; m)
+        {
+            if (auto last = nav.getAttribute("data-last"))
+            {
+                count = last.to!int;
+            }
+        }
         auto arr = new URL[count];
         foreach (i; 0..count)
         {
@@ -124,4 +128,19 @@ unittest
     
     auto chname = xen.chapterTitle(chapters[0]);
     assert(chname == "1.1", chname);
+}
+
+unittest
+{
+    import std.conv;
+    import std.stdio;
+    enum html = import("xenforotest2.html");
+    auto doc = new Document;
+    doc.parse(html, false, false, "utf-8");
+    auto root = doc.root;
+    auto xen = new XenforoAdapter;
+    auto url = "http://example.org/thread/xentest".parseURL;
+
+    auto urls = xen.chapterURLs(root, url);
+    assert(urls.length == 17, urls.length.to!string);
 }

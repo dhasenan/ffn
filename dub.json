@@ -5,7 +5,7 @@
 	"authors": ["dhasenan"],
 	"dependencies": {
 		"urld": "~>2.1.0",
-		"arsd-official:dom": "~master"
+		"arsd-official:dom": {"path": "arsd"}
 	},
 	"stringImportPaths": ["import"]
 }
