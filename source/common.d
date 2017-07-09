@@ -92,16 +92,13 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 	};
 	http.perform;
 	auto data = ap.data;
-    import std.file;
-    write("saved.html", data);
-    auto str = readText("saved.html");
 	const detectedEncoding = tryToDetermineEncoding(data);
 	if (detectedEncoding != null)
 	{
 		charset = detectedEncoding;
 	}
 	auto doc = new Document;
-	doc.parse(str, false, false, "utf-8");
+	doc.parse(cast(string)data.idup, false, false, charset);
 	info.downloaded[base] = doc;
 	return doc;
 }
