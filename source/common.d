@@ -28,6 +28,26 @@ Adapter[] allAdapters()
     return [new AO3Adapter, new FFNAdapter, a];
 }
 
+int elemCmp(const Element a, const Element b) {
+    int aa = cast(int)cast(void*)a;
+    int bb = cast(int)cast(void*)b;
+    return aa - bb;
+}
+
+void clean(Element elem)
+{
+    import std.container.rbtree;
+    auto queue = new RedBlackTree!(Element, elemCmp, false);
+    queue.insert(elem);
+
+    while (!queue.empty) {
+        auto e = queue.front;
+        queue.removeFront;
+        e.attributes.remove("style");
+        queue.insert(e.children);
+    }
+}
+
 struct DownloadInfo
 {
     SysTime lastDownload;
@@ -39,10 +59,12 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 {
 	auto base = u;
 	base.fragment = null;
+    /*
 	if (auto p = base in info.downloaded)
 	{
 		return *p;
 	}
+    */
     auto now = Clock.currTime(UTC());
     auto next = info.lastDownload + info.betweenDownloads;
     if (next > now)
@@ -50,6 +72,9 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
         Thread.sleep(next - now);
     }
 	auto http = HTTP(u.toString);
+    http.setUserAgent(
+            "Windows / IE 11: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) " ~
+            "like Gecko");
 	string charset;
 	Appender!(ubyte[]) ap;
 	http.onReceive = delegate ulong(ubyte[] buf) { ap ~= buf; return buf.length; };
@@ -66,14 +91,17 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 		}
 	};
 	http.perform;
-	auto doc = new Document;
-	const data = ap.data;
+	auto data = ap.data;
+    import std.file;
+    write("saved.html", data);
+    auto str = readText("saved.html");
 	const detectedEncoding = tryToDetermineEncoding(data);
 	if (detectedEncoding != null)
 	{
 		charset = detectedEncoding;
 	}
-	doc.parse(cast(string)data.idup, false, false, charset);
+	auto doc = new Document;
+	doc.parse(str, false, false, "utf-8");
 	info.downloaded[base] = doc;
 	return doc;
 }
@@ -108,15 +136,19 @@ Book fetch(URL u)
 	{
 		auto chapsDoc = info.fetchHTML(url);
 		infof("fetched html for chapter at %s", url);
-		foreach (chapter; adapter.chapters(chapsDoc.root, u))
+        auto chaps = adapter.chapters(chapsDoc.mainBody, u);
+        writefln("found chapters: %s", chaps.length);
+		foreach (chapter; chaps)
 		{
 			Chapter c;
 			c.title = adapter.chapterTitle(chapter);
 			// TODO filters (curly quotes, mote-it-not, etc)
 			c.content = adapter.chapterBody(chapter);
+            c.content.clean;
 			b.chapters ~= c;
 		}
 	}
+    writefln("book done; got %s chapters", b.chapters.length);
 	return b;
 }
 

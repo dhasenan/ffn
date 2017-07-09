@@ -58,7 +58,7 @@ struct Book
 		f.write("</div>\n");
 		foreach (chap; chapters)
 		{
-			f.write(`<h2 id="chapter">`);
+			f.write(`<h2 class="chapter">`);
 			f.write(chap.title);
 			f.write("</h2>\n");
 			if (chap.content)
@@ -73,4 +73,37 @@ struct Book
 		f.flush;
 		f.close;
 	}
+
+    void writeEpub(string filename)
+    {
+        static import epub;
+
+        alias EBook = epub.Book;
+        alias EChap = epub.Chapter;
+
+        auto eb = new EBook();
+        eb.title = title;
+        eb.author = author;
+        foreach (size_t i, Chapter c; chapters)
+        {
+            import std.format : format;
+            EChap ec = EChap(
+                c.title,
+                true,
+                // Chapter has to be an xhtml document. Build it!
+                // ...do I want default CSS?
+                format(`<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    </head>
+    <body>
+        %s
+    </body>
+<html>`, c.content.toString)
+            );
+            eb.chapters ~= ec;
+        }
+        epub.toEpub(eb, filename);
+    }
 }

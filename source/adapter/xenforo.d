@@ -38,8 +38,10 @@ class XenforoAdapter : Adapter
         auto arr = new URL[count];
         foreach (i; 0..count)
         {
-            auto pn = "page-" ~ (i+1).to!string;
-            arr[i] = u.resolve(pn);
+            auto pn = u;
+            pn.queryParams = pn.queryParams.dup;
+            pn.queryParams.overwrite("page", (i+1).to!string);
+            arr[i] = pn;
         }
         return arr;
     }
@@ -49,10 +51,16 @@ class XenforoAdapter : Adapter
     */
     Element[] chapters(Element doc, URL u)
     {
-        auto tm = doc.querySelectorAll("li[data-author]");
-        return tm
-            .filter!(x => x.getAttribute("class").canFind("hasThreadmark"))
-            .array;
+        Element[] ret;
+        foreach (tm; doc.querySelectorAll("li"))
+        {
+            bool threadmark = tm.getAttribute("class").canFind("hasThreadmark");
+            if (threadmark)
+            {
+                ret ~= tm;
+            }
+        }
+        return ret;
     }
 
     /// The title for the work.
@@ -134,7 +142,8 @@ unittest
 {
     import std.conv;
     import std.stdio;
-    enum html = import("xenforotest2.html");
+    import std.file;
+    auto html = readText("import/xenforotest2.html");
     auto doc = new Document;
     doc.parse(html, false, false, "utf-8");
     auto root = doc.root;
@@ -143,4 +152,21 @@ unittest
 
     auto urls = xen.chapterURLs(root, url);
     assert(urls.length == 17, urls.length.to!string);
+}
+
+unittest
+{
+    import std.conv;
+    import std.stdio;
+    import std.file;
+    auto html = readText("import/xenforotest3.html");
+    auto doc = new Document;
+    doc.parse(html, false, false, "utf-8");
+    auto root = doc.mainBody;
+    auto xen = new XenforoAdapter;
+    auto url = "http://example.org/thread/xentest".parseURL;
+
+    auto chaps = xen.chapters(root, url);
+    assert(chaps.length == 10, chaps.length.to!string);
+    
 }

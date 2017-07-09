@@ -5,7 +5,8 @@
 	"authors": ["dhasenan"],
 	"dependencies": {
 		"urld": "~>2.1.0",
-		"arsd-official:dom": {"path": "arsd"}
+		"arsd-official:dom": {"path": "arsd"},
+		"epub": "~>1.0.0"
 	},
 	"stringImportPaths": ["import"]
 }

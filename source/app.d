@@ -4,8 +4,10 @@ import common;
 import domain;
 
 import std.stdio;
+import std.getopt;
 
 import url;
+
 
 void main(string[] args)
 {
@@ -22,5 +24,6 @@ void main(string[] args)
 		}
 		
 		b.write(b.naturalTitle("html"));
+		b.writeEpub(b.naturalTitle("epub"));
 	}
 }

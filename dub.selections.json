@@ -3,6 +3,7 @@
 	"versions": {
 		"arsd-official": {"path":"arsd"},
 		"checkedint_andralex": "0.0.8",
+		"epub": "1.0.0",
 		"urld": "2.1.0"
 	}
 }
