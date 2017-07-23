@@ -1,6 +1,8 @@
 module domain;
 
 import arsd.dom;
+
+import std.format;
 import std.stdio;
 
 /**
@@ -84,6 +86,20 @@ struct Book
         auto eb = new EBook();
         eb.title = title;
         eb.author = author;
+        eb.chapters ~= EChap(
+                "Title page",
+                true,
+                format(`<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    </head>
+    <body>
+        <h1 class="bookTitle">%s</h1>
+        <h2 class="author">%s</h1>
+        <div class="slug">%s</div>
+    </body>
+<html>`, title, author, slug));
         foreach (size_t i, Chapter c; chapters)
         {
             import std.format : format;
@@ -98,9 +114,10 @@ struct Book
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     </head>
     <body>
+        <h1 class="chapterTitle">%s</h1>
         %s
     </body>
-<html>`, c.content.toString)
+<html>`, c.title, c.content.toString)
             );
             eb.chapters ~= ec;
         }
