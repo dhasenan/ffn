@@ -18,8 +18,7 @@ class XenforoAdapter : Adapter
 {
     bool accepts(URL u)
     {
-        return u.host.endsWith("sufficientvelocity.com")
-            || u.host.endsWith("spacebattles.com");
+        return u.host.endsWith("sufficientvelocity.com") || u.host.endsWith("spacebattles.com");
     }
 
     URL[] chapterURLs(Element doc, URL u)
@@ -36,11 +35,11 @@ class XenforoAdapter : Adapter
             }
         }
         auto arr = new URL[count];
-        foreach (i; 0..count)
+        foreach (i; 0 .. count)
         {
             auto pn = u;
             pn.queryParams = pn.queryParams.dup;
-            pn.queryParams.overwrite("page", (i+1).to!string);
+            pn.queryParams.overwrite("page", (i + 1).to!string);
             arr[i] = pn;
         }
         return arr;
@@ -74,8 +73,9 @@ class XenforoAdapter : Adapter
         }
         auto e = t.innerText;
         auto last = e.lastIndexOf("|");
-        if (last < 0) last = e.length;
-        return e[0..last].strip;
+        if (last < 0)
+            last = e.length;
+        return e[0 .. last].strip;
     }
 
     /// The author for the work.
@@ -102,7 +102,8 @@ class XenforoAdapter : Adapter
     string chapterTitle(Element doc)
     {
         auto label = doc.querySelector("div.threadmarker span.label");
-        if (label is null) return null;
+        if (label is null)
+            return null;
         return label.directText.strip;
     }
 
@@ -133,7 +134,7 @@ unittest
 
     auto chapters = xen.chapters(doc.root, URL.init);
     assert(chapters.length == 1);
-    
+
     auto chname = xen.chapterTitle(chapters[0]);
     assert(chname == "1.1", chname);
 }
@@ -143,6 +144,7 @@ unittest
     import std.conv;
     import std.stdio;
     import std.file;
+
     auto html = readText("import/xenforotest2.html");
     auto doc = new Document;
     doc.parse(html, false, false, "utf-8");
@@ -159,6 +161,7 @@ unittest
     import std.conv;
     import std.stdio;
     import std.file;
+
     auto html = readText("import/xenforotest3.html");
     auto doc = new Document;
     doc.parse(html, false, false, "utf-8");
@@ -168,5 +171,5 @@ unittest
 
     auto chaps = xen.chapters(root, url);
     assert(chaps.length == 10, chaps.length.to!string);
-    
+
 }

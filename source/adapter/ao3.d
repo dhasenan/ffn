@@ -29,14 +29,16 @@ class AO3Adapter : SimpleAdapter
                 urls ~= u.resolve(o.getAttribute("value"));
             }
         }
-        if (urls.length == 0) return [u];
+        if (urls.length == 0)
+            return [u];
         return urls;
     }
 
     override Element chapterBody(Element doc)
     {
         auto e = super.chapterBody(doc);
-        if (e is null) return e;
+        if (e is null)
+            return e;
         // Special thing here: the chapter title is inside the chapter.
         // That conflicts with what we do later (insert the chapter title manually) and
         // probably messes up calibre's chapter detection (h3.title -> book title?).

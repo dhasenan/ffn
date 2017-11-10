@@ -11,19 +11,19 @@ import arsd.dom;
 import url;
 
 /**
-	An adapter for fanfiction.net.
+    An adapter for fanfiction.net.
 */
 class FFNAdapter : SimpleAdapter
 {
-	this()
-	{
-		acceptedDomain = "www.fanfiction.net";
-		super.authorSelector = "#profile_top a.xcontrast_txt[href^=/u/]";
-		super.titleSelector = "#profile_top b.xcontrast_txt";
-		super.chapterTitleSelector = "select#chap_select option[selected]";
-		super.slugSelector = "#profile_top div.xcontrast_txt";
-		super.chapterBodySelector = "#storytext";
-	}
+    this()
+    {
+        acceptedDomain = "www.fanfiction.net";
+        super.authorSelector = "#profile_top a.xcontrast_txt[href^=/u/]";
+        super.titleSelector = "#profile_top b.xcontrast_txt";
+        super.chapterTitleSelector = "select#chap_select option[selected]";
+        super.slugSelector = "#profile_top div.xcontrast_txt";
+        super.chapterBodySelector = "#storytext";
+    }
 
     override string chapterTitle(Element doc)
     {
@@ -59,36 +59,36 @@ class FFNAdapter : SimpleAdapter
         return "(nameless chapter)";
     }
 
-	/*
-		We need some custom logic for chapter URLs because ffn doesn't have direct links
-		in one page. It doesn't have *any* links, just javascript everywhere.
-	*/
-	override URL[] chapterURLs(Element doc, URL u)
-	{
-		auto parts = u.path.split("/");
-		auto basePath = "/" ~ parts[1] ~ "/" ~ parts[2] ~ "/";
+    /*
+        We need some custom logic for chapter URLs because ffn doesn't have direct links
+        in one page. It doesn't have *any* links, just javascript everywhere.
+    */
+    override URL[] chapterURLs(Element doc, URL u)
+    {
+        auto parts = u.path.split("/");
+        auto basePath = "/" ~ parts[1] ~ "/" ~ parts[2] ~ "/";
         // We do it this way because there are two <select id="chap_select"> things.
         // There should only be one element with a given ID in a document...
         auto elems = doc.querySelector("select#chap_select").querySelectorAll("option");
         tracef("%s", elems.length);
-		URL[] urls;
-		foreach (elem; elems)
-		{
+        URL[] urls;
+        foreach (elem; elems)
+        {
             tracef("elem %s value is %s", elem, elem.getAttribute("value"));
-			auto chap = u;
-			chap.path = basePath ~ elem.getAttribute("value");
-			urls ~= chap;
-		}
-		if (urls.length == 0)
-		{
-			// This is a single-chapter fic. The input URL is the only URL.
-			urls ~= u;
-		}
-		return urls;
-	}
+            auto chap = u;
+            chap.path = basePath ~ elem.getAttribute("value");
+            urls ~= chap;
+        }
+        if (urls.length == 0)
+        {
+            // This is a single-chapter fic. The input URL is the only URL.
+            urls ~= u;
+        }
+        return urls;
+    }
 
     override Duration betweenDownloads()
     {
-        return 3.seconds;
+        return 2.seconds;
     }
 }
