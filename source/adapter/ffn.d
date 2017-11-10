@@ -3,6 +3,7 @@ module adapter.ffn;
 import adapter.core;
 import domain;
 
+import core.time;
 import std.experimental.logger;
 import std.string;
 
@@ -21,7 +22,7 @@ class FFNAdapter : SimpleAdapter
 		super.titleSelector = "#profile_top b.xcontrast_txt";
 		super.chapterTitleSelector = "select#chap_select option[selected]";
 		super.slugSelector = "#profile_top div.xcontrast_txt";
-		super.chapterBodySelector = ".storytext";
+		super.chapterBodySelector = "#storytext";
 	}
 
     override string chapterTitle(Element doc)
@@ -69,11 +70,11 @@ class FFNAdapter : SimpleAdapter
         // We do it this way because there are two <select id="chap_select"> things.
         // There should only be one element with a given ID in a document...
         auto elems = doc.querySelector("select#chap_select").querySelectorAll("option");
-        infof("%s", elems.length);
+        tracef("%s", elems.length);
 		URL[] urls;
 		foreach (elem; elems)
 		{
-            infof("elem %s value is %s", elem, elem.getAttribute("value"));
+            tracef("elem %s value is %s", elem, elem.getAttribute("value"));
 			auto chap = u;
 			chap.path = basePath ~ elem.getAttribute("value");
 			urls ~= chap;
@@ -85,4 +86,9 @@ class FFNAdapter : SimpleAdapter
 		}
 		return urls;
 	}
+
+    override Duration betweenDownloads()
+    {
+        return 3.seconds;
+    }
 }

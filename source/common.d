@@ -10,14 +10,23 @@ import std.array;
 import std.conv;
 import std.datetime;
 import std.experimental.logger;
+import std.file;
 import std.getopt;
 import std.net.curl;
-import std.stdio;
+import std.path;
 import std.string;
 
 import arsd.characterencodings;
 import arsd.dom;
 import url;
+
+struct Options
+{
+static:
+    string saveRawPath = null;
+    Duration extraTimeBetweenChapters = 0.seconds;
+}
+
 
 Adapter[] allAdapters()
 {
@@ -59,17 +68,17 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 {
 	auto base = u;
 	base.fragment = null;
-    /*
 	if (auto p = base in info.downloaded)
 	{
 		return *p;
 	}
-    */
     auto now = Clock.currTime(UTC());
-    auto next = info.lastDownload + info.betweenDownloads;
+    auto next = info.lastDownload + info.betweenDownloads + Options.extraTimeBetweenChapters;
     if (next > now)
     {
-        Thread.sleep(next - now);
+        auto d = next - now;
+        infof("sleeping %s for rate limit", d);
+        Thread.sleep(d);
     }
 	auto http = HTTP(u.toString);
     http.setUserAgent(
@@ -92,6 +101,12 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 	};
 	http.perform;
 	auto data = ap.data;
+    if (Options.saveRawPath != "")
+    {
+        auto path = chainPath(Options.saveRawPath, u.path.baseName);
+        std.file.write(path, data);
+    }
+
 	const detectedEncoding = tryToDetermineEncoding(data);
 	if (detectedEncoding != null)
 	{
@@ -99,7 +114,9 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 	}
 	auto doc = new Document;
 	doc.parse(cast(string)data.idup, false, false, charset);
+
 	info.downloaded[base] = doc;
+    info.lastDownload = Clock.currTime(UTC());
 	return doc;
 }
 
@@ -132,9 +149,9 @@ Book fetch(URL u)
 	foreach (url; urls)
 	{
 		auto chapsDoc = info.fetchHTML(url);
-		infof("fetched html for chapter at %s", url);
+		tracef("fetched html for chapter at %s", url);
         auto chaps = adapter.chapters(chapsDoc.mainBody, u);
-        writefln("found chapters: %s", chaps.length);
+        tracef("found chapters: %s", chaps.length);
 		foreach (chapter; chaps)
 		{
 			Chapter c;
@@ -145,7 +162,7 @@ Book fetch(URL u)
 			b.chapters ~= c;
 		}
 	}
-    writefln("book done; got %s chapters", b.chapters.length);
+    tracef("book done; got %s chapters", b.chapters.length);
 	return b;
 }
 
