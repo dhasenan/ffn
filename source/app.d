@@ -26,6 +26,10 @@ int main(string[] args)
     Options.extraTimeBetweenChapters = (cast(long)(delay * 1000)).dur!"msecs";
     if (verbose)
     {
+        globalLogLevel = LogLevel.trace;
+    }
+    else
+    {
         globalLogLevel = LogLevel.warning;
     }
 

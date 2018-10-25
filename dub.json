@@ -6,7 +6,10 @@
 	"dependencies": {
 		"urld": "~>2.1.0",
 		"arsd-official:dom": {"path": "arsd"},
-		"epub": "~>1.0.0"
+		"epub": "~>1.1.2",
+    "gen-package-version": "~>1.0.0"
 	},
+  "preGenerateCommands": [
+  ],
 	"stringImportPaths": ["import"]
 }

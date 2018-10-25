@@ -79,6 +79,7 @@ struct Book
 
         alias EBook = epub.Book;
         alias EChap = epub.Chapter;
+        alias Cover = epub.Cover;
 
         auto eb = new EBook();
         eb.title = title;
@@ -116,6 +117,16 @@ struct Book
                 c.title, c.content.toString));
             eb.chapters ~= ec;
         }
+
+        import std.uuid : randomUUID;
+        eb.id = randomUUID.toString;
+
+        enum VERSION = "1.0.0";
+        Cover cover = {
+          generator: "ffn-" ~ VERSION,
+          book: eb,
+        };
+        //eb.coverImage = epub.render(cover);
         epub.toEpub(eb, filename);
     }
 }

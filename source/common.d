@@ -167,6 +167,7 @@ Book fetch(URL u)
         }
     }
     tracef("book done; got %s chapters", b.chapters.length);
+
     return b;
 }
 
