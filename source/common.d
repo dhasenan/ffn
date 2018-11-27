@@ -145,7 +145,7 @@ Fic fetch(URL u)
     DownloadInfo info = {betweenDownloads:
     adapter.betweenDownloads};
     auto mainDoc = info.fetchHTML(u);
-    Fic b;
+    Fic b = new Fic;
     b.url = u;
     b.author = adapter.author(mainDoc.root);
     b.title = adapter.title(mainDoc.root);

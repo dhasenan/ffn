@@ -9,7 +9,7 @@ import url;
 /**
     A chapter from a story.
 */
-struct Episode
+class Episode
 {
     /// The title of the chapter.
     string title;
@@ -23,7 +23,7 @@ struct Episode
 /**
     A book (a story) that may contain several chapters.
 */
-struct Fic
+class Fic
 {
     import epub.books : Attachment;
     /// The title of the book.

@@ -64,8 +64,8 @@ class XenforoAdapter : Adapter
             bool threadmark = tm.getAttribute("class").canFind("hasThreadmark");
             if (threadmark)
             {
-                Episode c;
-                c.content = tm.querySelector("article");
+                Episode c = new Episode;
+                c.content = tm;
                 auto data = new XenData;
                 data.postAuthor = tm.getAttribute("data-author");
                 data.threadmark = tm.getAttribute("id").splitter("-").drop(1).front;
@@ -150,8 +150,9 @@ class XenforoAdapter : Adapter
         if (book.chapters.length == 0) return;
         Episode[string] byURL;
         Episode first;
-        foreach (chapter; book.chapters)
+        foreach (ref chapter; book.chapters)
         {
+            chapter.content = chapter.content.querySelector("article");
             auto data = cast(XenData)chapter.data;
             byURL[data.threadmark] = chapter;
             if (data.lastThreadmark == "")
@@ -159,7 +160,8 @@ class XenforoAdapter : Adapter
                 first = chapter;
             }
         }
-        assert(first != Episode.init);
+        assert(first !is Episode.init);
+        /*
         Episode[] chapters;
         while (true)
         {
@@ -169,6 +171,7 @@ class XenforoAdapter : Adapter
             first = byURL[data.nextThreadmark];
         }
         book.chapters = chapters;
+        */
     }
 }
 

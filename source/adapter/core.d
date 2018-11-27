@@ -136,7 +136,7 @@ class SimpleAdapter : Adapter
         Episode[] cc;
         foreach (c; ch)
         {
-            Episode chap;
+            Episode chap = new Episode;
             chap.content = c;
             cc ~= chap;
         }
