@@ -35,7 +35,7 @@ int main(string[] args)
 
     foreach (arg; args[1 .. $])
     {
-        Book b;
+        Fic b;
         try
         {
             b = fetch(arg.parseURL);

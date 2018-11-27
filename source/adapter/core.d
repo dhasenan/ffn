@@ -1,9 +1,9 @@
 module adapter.core;
 
-import core.time;
-import std.experimental.logger;
-
 import arsd.dom;
+import core.time;
+import domain;
+import std.experimental.logger;
 import url;
 
 /**
@@ -27,8 +27,9 @@ interface Adapter
 
     /**
 	   Extract chapters from a document containing one or more.
+       This should at least fill in the contents field, but other fields are optional.
 	*/
-    Element[] chapters(Element doc, URL u);
+    Episode[] chapters(Element doc, URL u);
 
     /// The title for the work.
     string title(Element doc);
@@ -47,6 +48,9 @@ interface Adapter
 
     /// How long to wait between new page downloads
     Duration betweenDownloads();
+
+    /// Do any fixups to finish off the book.
+    void postprocess(Fic book);
 }
 
 /**
@@ -126,7 +130,20 @@ class SimpleAdapter : Adapter
         return innerText(doc, chapterTitleSelector);
     }
 
-    Element[] chapters(Element doc, URL u)
+    Episode[] chapters(Element doc, URL u)
+    {
+        auto ch = chapterElements(doc, u);
+        Episode[] cc;
+        foreach (c; ch)
+        {
+            Episode chap;
+            chap.content = c;
+            cc ~= chap;
+        }
+        return cc;
+    }
+
+    Element[] chapterElements(Element doc, URL u)
     {
         return [doc];
     }
@@ -160,4 +177,6 @@ class SimpleAdapter : Adapter
     {
         return dur!"msecs"(250);
     }
+
+    void postprocess(Fic b) {}
 }

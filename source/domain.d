@@ -1,26 +1,31 @@
 module domain;
 
 import arsd.dom;
-
+import std.experimental.logger;
 import std.format;
 import std.stdio;
+import url;
 
 /**
     A chapter from a story.
 */
-struct Chapter
+struct Episode
 {
     /// The title of the chapter.
     string title;
     /// The HTML content of the chapter.
     Element content;
+    /// Extra data from the adapter.
+    Object data;
+    URL url;
 }
 
 /**
     A book (a story) that may contain several chapters.
 */
-struct Book
+struct Fic
 {
+    import epub.books : Attachment;
     /// The title of the book.
     string title;
     /// The author.
@@ -28,7 +33,9 @@ struct Book
     /// The short description.
     string slug;
     /// The chapters.
-    Chapter[] chapters;
+    Episode[] chapters;
+    URL url;
+    Attachment[] attachments;
 
     /// The natural filename to use. Restricts to alphanum + whitespace.
     string naturalTitle(string ext)
@@ -82,6 +89,8 @@ struct Book
         alias Cover = epub.Cover;
 
         auto eb = new EBook();
+        eb.attachments = attachments;
+        infof("ebook comes with %s attachments", eb.attachments.length);
         eb.title = title;
         eb.author = author;
         eb.chapters ~= EChap("Title page", true,
@@ -89,15 +98,16 @@ struct Book
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <title>%1$s</title>
     </head>
     <body>
-        <h1 class="bookTitle">%s</h1>
-        <h2 class="author">%s</h1>
-        <div class="slug">%s</div>
+        <h1 class="bookTitle">%1$s</h1>
+        <h2 class="author">%2$s</h1>
+        <div class="slug">%3$s</div>
     </body>
-<html>`,
+</html>`,
             title, author, slug));
-        foreach (size_t i, Chapter c; chapters)
+        foreach (size_t i, Episode c; chapters)
         {
             import std.format : format;
 
@@ -108,12 +118,13 @@ struct Book
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <title>%1$s</title>
     </head>
     <body>
-        <h1 class="chapterTitle">%s</h1>
-        %s
+        <h1 class="chapterTitle">%1$s</h1>
+        %2$s
     </body>
-<html>`,
+</html>`,
                 c.title, c.content.toString));
             eb.chapters ~= ec;
         }

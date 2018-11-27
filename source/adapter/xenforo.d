@@ -1,8 +1,8 @@
 module adapter.xenforo;
 
 import adapter.core;
-
 import core.time;
+import domain;
 import std.algorithm;
 import std.array;
 import std.conv;
@@ -10,9 +10,17 @@ import std.experimental.logger;
 import std.range;
 import std.stdio;
 import std.string;
-
+import std.typecons;
 import arsd.dom;
 import url;
+
+class XenData
+{
+    string nextThreadmark;
+    string lastThreadmark;
+    string threadmark;
+    string postAuthor;
+}
 
 class XenforoAdapter : Adapter
 {
@@ -48,18 +56,38 @@ class XenforoAdapter : Adapter
     /**
        Extract chapters from a document containing one or more.
     */
-    Element[] chapters(Element doc, URL u)
+    Episode[] chapters(Element doc, URL u)
     {
-        Element[] ret;
+        Episode[] ret;
         foreach (tm; doc.querySelectorAll("li"))
         {
             bool threadmark = tm.getAttribute("class").canFind("hasThreadmark");
             if (threadmark)
             {
-                ret ~= tm;
+                Episode c;
+                c.content = tm.querySelector("article");
+                auto data = new XenData;
+                data.postAuthor = tm.getAttribute("data-author");
+                data.threadmark = tm.getAttribute("id").splitter("-").drop(1).front;
+                data.lastThreadmark = getThreadmarkTarget(tm, ".previous");
+                data.nextThreadmark = getThreadmarkTarget(tm, ".next");
+                c.data = data;
+                ret ~= c;
             }
         }
         return ret;
+    }
+
+    string getThreadmarkTarget(Element tm, string clazz)
+    {
+        auto a = tm
+            .querySelector(".threadmarker_nav_top")
+            .querySelector(clazz);
+        if (a is null) return null;
+        auto postURL = a
+            .querySelector("a")
+            .getAttribute("data-previewurl");
+        return postURL.splitter("/").drop(1).front;
     }
 
     /// The title for the work.
@@ -116,6 +144,32 @@ class XenforoAdapter : Adapter
     {
         return dur!"msecs"(250);
     }
+
+    void postprocess(Fic book)
+    {
+        if (book.chapters.length == 0) return;
+        Episode[string] byURL;
+        Episode first;
+        foreach (chapter; book.chapters)
+        {
+            auto data = cast(XenData)chapter.data;
+            byURL[data.threadmark] = chapter;
+            if (data.lastThreadmark == "")
+            {
+                first = chapter;
+            }
+        }
+        assert(first != Episode.init);
+        Episode[] chapters;
+        while (true)
+        {
+            chapters ~= first;
+            auto data = cast(XenData)first.data;
+            if (data.nextThreadmark == "") break;
+            first = byURL[data.nextThreadmark];
+        }
+        book.chapters = chapters;
+    }
 }
 
 unittest
@@ -135,7 +189,7 @@ unittest
     auto chapters = xen.chapters(doc.root, URL.init);
     assert(chapters.length == 1);
 
-    auto chname = xen.chapterTitle(chapters[0]);
+    auto chname = xen.chapterTitle(chapters[0].content);
     assert(chname == "1.1", chname);
 }
 

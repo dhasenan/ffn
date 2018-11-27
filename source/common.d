@@ -126,7 +126,7 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 /**
     Fetch the book using the given adapter.
 */
-Book fetch(URL u)
+Fic fetch(URL u)
 {
     Adapter adapter;
     foreach (a; allAdapters)
@@ -145,7 +145,8 @@ Book fetch(URL u)
     DownloadInfo info = {betweenDownloads:
     adapter.betweenDownloads};
     auto mainDoc = info.fetchHTML(u);
-    Book b;
+    Fic b;
+    b.url = u;
     b.author = adapter.author(mainDoc.root);
     b.title = adapter.title(mainDoc.root);
     b.slug = adapter.slug(mainDoc.root);
@@ -158,17 +159,89 @@ Book fetch(URL u)
         tracef("found chapters: %s", chaps.length);
         foreach (chapter; chaps)
         {
-            Chapter c;
-            c.title = adapter.chapterTitle(chapter);
+            chapter.url = url;
+            chapter.title = adapter.chapterTitle(chapter.content);
             // TODO filters (curly quotes, mote-it-not, etc)
-            c.content = adapter.chapterBody(chapter);
-            c.content.clean;
-            b.chapters ~= c;
+            chapter.content.clean;
+            b.chapters ~= chapter;
         }
     }
-    tracef("book done; got %s chapters", b.chapters.length);
+    adapter.postprocess(b);
+    tracef("finished book text; got %s chapters", b.chapters.length);
+
+    fetchImages(b);
 
     return b;
+}
+
+void fetchImages(ref Fic b)
+{
+    import epub.books : Attachment;
+    bool[URL] found;
+    foreach (episode; b.chapters)
+    {
+        foreach (img; episode.content.querySelectorAll("img"))
+        {
+            import std.conv : to;
+            import std.array : Appender;
+            import std.net.curl : HTTP;
+
+            URL src;
+            try
+            {
+                src = episode.url.resolve(img.getAttribute("src"));
+            }
+            catch (Exception e)
+            {
+                continue;
+            }
+            if (src in found) continue;
+            found[src] = true;
+            try
+            {
+                auto client = HTTP(src);
+                client.maxRedirects = 10;
+                Appender!(ubyte[]) appender;
+                string mimeType;
+                client.onReceiveHeader = (k, v)
+                {
+                    import std.uni : sicmp;
+                    if (sicmp(k, "Content-Type") == 0)
+                    {
+                        mimeType = v.idup;
+                    }
+                };
+                client.onReceive = delegate ulong(ubyte[] b) { appender ~= b; return b.length; };
+                client.perform;
+                if (client.statusLine.code >= 400)
+                {
+                    warningf("failed to download %s at an attachment: code %s, %s", src,
+                            client.statusLine.code, client.statusLine.reason);
+                    continue;
+                }
+                auto lastSlash = src.path.lastIndexOf("/");
+                auto lastDot = src.path.lastIndexOf(".");
+                string suffix;
+                if (lastDot >= 0 && lastDot > lastSlash)
+                {
+                    suffix = src.path[lastDot .. $];
+                }
+                auto attachment = Attachment(
+                    null,
+                    "image_" ~ b.attachments.length.to!string ~ suffix,
+                    mimeType,
+                    appender.data);
+                found[src] = true;
+                b.attachments ~= attachment;
+                img.setAttribute("src", attachment.filename);
+                infof("grabbed %s into %s", src, attachment.filename);
+            }
+            catch (Exception e)
+            {
+                warningf("failed to download image as attachment: %s", src, e);
+            }
+        }
+    }
 }
 
 class NoAdapterException : Exception
