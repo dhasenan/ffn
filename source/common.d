@@ -178,11 +178,12 @@ Fic fetch(URL u)
 void fetchImages(ref Fic b)
 {
     import epub.books : Attachment;
-    bool[URL] found;
+    string[URL] urlToPath;
     foreach (episode; b.chapters)
     {
         foreach (img; episode.content.querySelectorAll("img"))
         {
+            if (img.getAttribute("src").startsWith("data:image")) continue;
             import std.conv : to;
             import std.array : Appender;
             import std.net.curl : HTTP;
@@ -196,8 +197,7 @@ void fetchImages(ref Fic b)
             {
                 continue;
             }
-            if (src in found) continue;
-            found[src] = true;
+            if (src in urlToPath) continue;
             try
             {
                 auto client = HTTP(src);
@@ -232,7 +232,7 @@ void fetchImages(ref Fic b)
                     "image_" ~ b.attachments.length.to!string ~ suffix,
                     mimeType,
                     appender.data);
-                found[src] = true;
+                urlToPath[src] = attachment.filename;
                 b.attachments ~= attachment;
                 img.setAttribute("src", attachment.filename);
                 infof("grabbed %s into %s", src, attachment.filename);
@@ -243,6 +243,16 @@ void fetchImages(ref Fic b)
             }
         }
     }
+
+    // For later use, store a map of images we grabbed.
+    import std.json;
+    JSONValue map;
+    foreach (k, v; urlToPath)
+    {
+        map[k.toString] = v;
+    }
+    b.attachments ~= Attachment(
+            null, "image_index.json", "application/json", cast(const(ubyte)[])map.toPrettyString);
 }
 
 class NoAdapterException : Exception

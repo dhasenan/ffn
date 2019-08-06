@@ -131,7 +131,7 @@ class Xenforo2Adapter : Adapter
 
     Element chapterBody(Element doc)
     {
-        return doc.querySelector("div.messageContent article");
+        assert(false);
     }
 
     Duration betweenDownloads()
@@ -144,7 +144,7 @@ class Xenforo2Adapter : Adapter
         if (book.chapters.length == 0) return;
         foreach (ref chapter; book.chapters)
         {
-            chapter.content = chapter.content.querySelector("article");
+            chapter.content = chapter.content.querySelector("article.message-body");
         }
     }
 }
