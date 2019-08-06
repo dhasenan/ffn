@@ -16,6 +16,9 @@ interface Adapter
     /// Whether this adapter can handle this URL.
     bool accepts(URL u);
 
+    /// Transform the input URL into a canonical form to work off.
+    URL canonicalize(URL u);
+
     /**
 		The URLs of each chapter.
 
@@ -75,6 +78,11 @@ class SimpleAdapter : Adapter
     bool accepts(URL u)
     {
         return u.host == acceptedDomain;
+    }
+
+    URL canonicalize(URL u)
+    {
+        return u;
     }
 
     URL[] chapterURLs(Element doc, URL u)

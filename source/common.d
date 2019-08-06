@@ -32,9 +32,10 @@ Adapter[] allAdapters()
     import adapter.ao3;
     import adapter.ffn;
     import adapter.xenforo;
+    import adapter.xenforo2;
 
     Adapter a = new XenforoAdapter;
-    return [new AO3Adapter, new FFNAdapter, a];
+    return [new AO3Adapter, new FFNAdapter, a, new Xenforo2Adapter];
 }
 
 int elemCmp(const Element a, const Element b)
@@ -84,8 +85,8 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
         Thread.sleep(d);
     }
     auto http = HTTP(u.toString);
-    http.setUserAgent(
-        "Windows / IE 11: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) " ~ "like Gecko");
+    http.setUserAgent("Windows / IE 11: Mozilla/5.0 " ~
+            "(Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
     string charset;
     Appender!(ubyte[]) ap;
     http.onReceive = delegate ulong(ubyte[] buf) { ap ~= buf; return buf.length; };
@@ -134,6 +135,7 @@ Fic fetch(URL u)
         if (a.accepts(u))
         {
             adapter = a;
+            u = adapter.canonicalize(u);
             break;
         }
     }
@@ -142,8 +144,7 @@ Fic fetch(URL u)
         throw new NoAdapterException("no adapter for url " ~ u.toHumanReadableString);
     }
 
-    DownloadInfo info = {betweenDownloads:
-    adapter.betweenDownloads};
+    DownloadInfo info = {betweenDownloads: adapter.betweenDownloads};
     auto mainDoc = info.fetchHTML(u);
     Fic b = new Fic;
     b.url = u;

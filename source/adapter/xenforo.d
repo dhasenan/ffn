@@ -26,7 +26,12 @@ class XenforoAdapter : Adapter
 {
     bool accepts(URL u)
     {
-        return u.host.endsWith("sufficientvelocity.com") || u.host.endsWith("spacebattles.com");
+        return u.host.endsWith("spacebattles.com");
+    }
+
+    URL canonicalize(URL u)
+    {
+        return u;
     }
 
     URL[] chapterURLs(Element doc, URL u)
@@ -148,30 +153,10 @@ class XenforoAdapter : Adapter
     void postprocess(Fic book)
     {
         if (book.chapters.length == 0) return;
-        Episode[string] byURL;
-        Episode first;
         foreach (ref chapter; book.chapters)
         {
             chapter.content = chapter.content.querySelector("article");
-            auto data = cast(XenData)chapter.data;
-            byURL[data.threadmark] = chapter;
-            if (data.lastThreadmark == "")
-            {
-                first = chapter;
-            }
         }
-        assert(first !is Episode.init);
-        /*
-        Episode[] chapters;
-        while (true)
-        {
-            chapters ~= first;
-            auto data = cast(XenData)first.data;
-            if (data.nextThreadmark == "") break;
-            first = byURL[data.nextThreadmark];
-        }
-        book.chapters = chapters;
-        */
     }
 }
 
