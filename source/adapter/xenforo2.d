@@ -63,6 +63,8 @@ class Xenforo2Adapter : Adapter
     URL[] chapterURLs(Element doc, URL u)
     {
         auto nav = doc.querySelector("input.js-pageJumpPage");
+        if (!nav) return [u];
+        if (!("max" in nav.attributes)) return [u];
         auto count = nav.getAttribute("max").to!int;
         auto arr = new URL[count];
         foreach (i; 0 .. count)
