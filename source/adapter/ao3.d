@@ -1,8 +1,8 @@
 module adapter.ao3;
 
-
 import adapter.core;
 import arsd.dom;
+import core.time;
 import domain;
 import std.experimental.logger;
 import url;
@@ -15,6 +15,7 @@ class AO3Adapter : SimpleAdapter
         super.acceptedDomain = "archiveofourown.org";
         super.authorSelector = "a[rel=author]";
         super.chapterBodySelector = "div#chapters";
+        super.titleSelector = "h2.title";
         super.chapterTitleSelector = "h3.title";
         super.slugSelector = "div.summary";
     }
@@ -51,6 +52,11 @@ class AO3Adapter : SimpleAdapter
         }
         return e;
     }
+
+    override Duration betweenDownloads()
+    {
+        return dur!"msecs"(400);
+    }
 }
 
 class AO3SeriesAdapter : SimpleAdapter
@@ -59,6 +65,7 @@ class AO3SeriesAdapter : SimpleAdapter
     {
         super.acceptedDomain = "archiveofourown.org";
         super.authorSelector = "a[rel=author]";
+        super.titleSelector = "h2.heading";
         super.slugSelector = "blockquote.userstuff";
     }
 
@@ -101,4 +108,20 @@ class AO3SeriesAdapter : SimpleAdapter
         }
         return e;
     }
+}
+
+unittest
+{
+    auto doc = new Document(import("ao3seriestest.html"));
+    auto s = new AO3SeriesAdapter;
+    assert(s.title(doc.root) == "Ashen Skies", s.title(doc.root));
+    assert(s.author(doc.root) == "Xenobia");
+    auto chapterURLs = s.chapterURLs(doc.root, "https://example.org/foo/bar".parseURL);
+    assert(chapterURLs == [
+            parseURL("https://example.org/works/470820"),
+            parseURL("https://example.org/works/425213"),
+            parseURL("https://example.org/works/638088"),
+            parseURL("https://example.org/works/638102"),
+            parseURL("https://example.org/works/775113"),
+    ]);
 }

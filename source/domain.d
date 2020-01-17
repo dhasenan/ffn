@@ -109,6 +109,7 @@ class Fic
             title, author, slug));
         foreach (size_t i, Episode c; chapters)
         {
+            tracef("writing chapter %s: %s", i, c.title);
             import std.format : format;
 
             EChap ec = EChap(c.title, true,
@@ -138,6 +139,8 @@ class Fic
           book: eb,
         };
         //eb.coverImage = epub.render(cover);
+        tracef("sending to epub generator");
         epub.toEpub(eb, filename);
+        tracef("wrote %s", filename);
     }
 }

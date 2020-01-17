@@ -4,13 +4,12 @@ import arsd.dom;
 import core.time;
 import domain;
 import std.experimental.logger;
+import std.string;
 import url;
 
 /**
-	The core interface for a site-specific adapter.
-
-	This assumes the site 
-*/
+ * The core interface for a site-specific adapter.
+ */
 interface Adapter
 {
     /// Whether this adapter can handle this URL.
@@ -20,18 +19,18 @@ interface Adapter
     URL canonicalize(URL u);
 
     /**
-		The URLs of each chapter.
+       The URLs of each chapter.
 
-        These might contain multiple values that map to the same page. If that's convenient, do it
-        that way. If it's more convenient to provide a minimal list of pages containing chapters, do
-        it that way.
-	*/
+       These might contain multiple values that map to the same page. If that's convenient, do it
+       that way. If it's more convenient to provide a minimal list of pages containing chapters, do
+       it that way.
+     */
     URL[] chapterURLs(Element doc, URL u);
 
     /**
-	   Extract chapters from a document containing one or more.
-       This should at least fill in the contents field, but other fields are optional.
-	*/
+      Extract chapters from a document containing one or more.
+      This should at least fill in the contents field, but other fields are optional.
+     */
     Episode[] chapters(Element doc, URL u);
 
     /// The title for the work.
@@ -57,9 +56,10 @@ interface Adapter
 }
 
 /**
-	A site Adapter that assumes one chapter per page, where everything is accessible with CSS selectors.
+  A site Adapter that assumes one chapter per page, where everything is accessible with CSS
+  selectors.
 
-	This is probably a good starting point for any adapter you want to write.
+  This is probably a good starting point for any adapter you want to write.
 */
 class SimpleAdapter : Adapter
 {
@@ -153,7 +153,7 @@ class SimpleAdapter : Adapter
 
     Element[] chapterElements(Element doc, URL u)
     {
-        return [doc];
+        return [chapterBody(doc)];
     }
 
     Element chapterBody(Element doc)
@@ -178,7 +178,7 @@ class SimpleAdapter : Adapter
         auto f = doc.getElementsBySelector(selector);
         if (f.length == 0)
             return "";
-        return f[0].innerText;
+        return f[0].innerText.strip;
     }
 
     Duration betweenDownloads()

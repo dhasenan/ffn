@@ -95,17 +95,36 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
             "(Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
     string charset;
     Appender!(ubyte[]) ap;
-    http.onReceive = delegate ulong(ubyte[] buf) { ap ~= buf; return buf.length; };
+    bool gzip;
+    import std.zlib : UnCompress;
+    auto uncompress = new UnCompress;
+    http.onReceive = delegate ulong(ubyte[] buf)
+    {
+        if (gzip)
+            ap ~= cast(ubyte[])uncompress.uncompress(buf);
+        else
+            ap ~= buf;
+        return buf.length;
+    };
     http.onReceiveHeader = delegate void(in char[] key, in char[] val) {
         import std.uni;
+        auto lkey = toLower(key);
 
-        if (toLower(key) == "content-type")
+        if (lkey == "content-type")
         {
             enum CHARSET_INFO = "charset=";
             auto f = val.indexOf(CHARSET_INFO);
             if (f >= 0)
             {
                 charset = val[(f + CHARSET_INFO.length) .. $].idup;
+            }
+        }
+        else if (lkey == "content-encoding")
+        {
+            if (val.indexOf("gzip") >= 0)
+            {
+                gzip = true;
+                infof("gzip!");
             }
         }
     };
@@ -148,9 +167,11 @@ Fic fetch(URL u)
 
         if (bookURLs.length == 0) continue;
         Fic[] parts;
+        infof("book urls: %s", bookURLs);
+        infof("title: %s author: %s", s.title(seriesDoc.root), s.author(seriesDoc.root));
         foreach (url; bookURLs)
         {
-            parts ~= fetch(url);
+            //parts ~= fetch(url);
         }
 
         // Stitch them together into one book.
@@ -161,15 +182,24 @@ Fic fetch(URL u)
 
         foreach (part; parts)
         {
+            if (stitched.author.length == 0) stitched.author = part.author;
+            if (stitched.slug.length == 0) stitched.slug = part.slug;
             foreach (chapter; part.chapters)
             {
                 chapter.title = part.title ~ " " ~ chapter.title;
             }
             stitched.chapters ~= part.chapters;
+            stitched.attachments ~= part.attachments;
+        }
+
+        if (stitched.title.length == 0)
+        {
+            stitched.title = seriesDoc.root.querySelector("title").innerText;
         }
 
         return stitched;
     }
+
     foreach (a; allAdapters)
     {
         if (a.accepts(u))
@@ -217,6 +247,8 @@ Fic fetch(URL u)
 
 void fetchImages(ref Fic b)
 {
+    static ulong numImages = 0;
+
     import epub.books : Attachment;
     string[URL] urlToPath;
     foreach (episode; b.chapters)
@@ -269,7 +301,7 @@ void fetchImages(ref Fic b)
                 }
                 auto attachment = Attachment(
                     null,
-                    "image_" ~ b.attachments.length.to!string ~ suffix,
+                    "image_" ~ numImages.to!string ~ suffix,
                     mimeType,
                     appender.data);
                 urlToPath[src] = attachment.filename;
