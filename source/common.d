@@ -27,6 +27,12 @@ static:
     Duration extraTimeBetweenChapters = 0.seconds;
 }
 
+Adapter[] seriesAdapters()
+{
+    import adapter.ao3;
+    return [new AO3SeriesAdapter];
+}
+
 Adapter[] allAdapters()
 {
     import adapter.ao3;
@@ -129,7 +135,41 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 */
 Fic fetch(URL u)
 {
+    DownloadInfo info;
     Adapter adapter;
+    infof("%s series adapters", seriesAdapters.length);
+    foreach (s; seriesAdapters)
+    {
+        if (!s.accepts(u)) continue;
+
+        info.betweenDownloads = s.betweenDownloads;
+        auto seriesDoc = info.fetchHTML(u);
+        auto bookURLs = s.chapterURLs(seriesDoc.root, u);
+
+        if (bookURLs.length == 0) continue;
+        Fic[] parts;
+        foreach (url; bookURLs)
+        {
+            parts ~= fetch(url);
+        }
+
+        // Stitch them together into one book.
+        Fic stitched = new Fic;
+        stitched.author = s.author(seriesDoc.root);
+        stitched.title = s.title(seriesDoc.root);
+        stitched.slug = s.slug(seriesDoc.root);
+
+        foreach (part; parts)
+        {
+            foreach (chapter; part.chapters)
+            {
+                chapter.title = part.title ~ " " ~ chapter.title;
+            }
+            stitched.chapters ~= part.chapters;
+        }
+
+        return stitched;
+    }
     foreach (a; allAdapters)
     {
         if (a.accepts(u))
@@ -144,7 +184,7 @@ Fic fetch(URL u)
         throw new NoAdapterException("no adapter for url " ~ u.toHumanReadableString);
     }
 
-    DownloadInfo info = {betweenDownloads: adapter.betweenDownloads};
+    info.betweenDownloads = adapter.betweenDownloads;
     auto mainDoc = info.fetchHTML(u);
     Fic b = new Fic;
     b.url = u;

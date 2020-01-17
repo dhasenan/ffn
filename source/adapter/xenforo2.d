@@ -25,6 +25,8 @@ class Xen2Data
 
 class Xenforo2Adapter : Adapter
 {
+    bool includeSpoilers = false;
+
     bool accepts(URL u)
     {
         return u.host.endsWith("sufficientvelocity.com");
@@ -32,30 +34,16 @@ class Xenforo2Adapter : Adapter
 
     URL canonicalize(URL u)
     {
+        enum reader = "/reader/";
         // ex:
         // /threads/with-this-ring-young-justice-si-thread-twelve.25032/reader/page-2059
         auto base = u;
         base.fragment = "";
-        if (!base.path.endsWith("/reader/"))
-        {
-            if (base.path.canFind("/reader/"))
-            {
-                base.path = base.path[0 .. $-1];
-                base.path = base.path[0 .. base.path.lastIndexOf("/")];
-            }
-            else
-            {
-                // * drop the 'page-nn' if it's there
-                // * add '/reader/'
-                auto endloc = base.path[0..$-1].lastIndexOf("/") + 1;
-                auto end = base.path[endloc .. $];
-                if (end.startsWith("page-"))
-                {
-                    base.path = base.path[0..endloc];
-                    base = base.resolve("reader/");
-                }
-            }
-        }
+        auto s = base.path["/threads/".length .. $];
+        infof("path fragment a: %s", s);
+        s = s[0 .. s.indexOf('/')];
+        infof("path fragment b: %s", s);
+        base.path = "/threads/" ~ s ~ "/reader/";
         infof("canonicalized url: %s", base);
         return base;
     }
