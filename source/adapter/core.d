@@ -153,7 +153,9 @@ class SimpleAdapter : Adapter
 
     Element[] chapterElements(Element doc, URL u)
     {
-        return [chapterBody(doc)];
+        auto b = chapterBody(doc);
+        if (b) return [b];
+        return [];
     }
 
     Element chapterBody(Element doc)

@@ -106,30 +106,45 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
             ap ~= buf;
         return buf.length;
     };
+    URL redirect;
     http.onReceiveHeader = delegate void(in char[] key, in char[] val) {
         import std.uni;
         auto lkey = toLower(key);
 
-        if (lkey == "content-type")
+        switch (lkey)
         {
-            enum CHARSET_INFO = "charset=";
-            auto f = val.indexOf(CHARSET_INFO);
-            if (f >= 0)
-            {
-                charset = val[(f + CHARSET_INFO.length) .. $].idup;
-            }
-        }
-        else if (lkey == "content-encoding")
-        {
-            if (val.indexOf("gzip") >= 0)
-            {
-                gzip = true;
-                infof("gzip!");
-            }
+            case "content-type":
+                enum CHARSET_INFO = "charset=";
+                auto f = val.indexOf(CHARSET_INFO);
+                if (f >= 0)
+                {
+                    charset = val[(f + CHARSET_INFO.length) .. $].idup;
+                }
+                break;
+            case "content-encoding":
+                if (val.indexOf("gzip") >= 0)
+                {
+                    gzip = true;
+                    infof("gzip!");
+                }
+                break;
+            case "location":
+                redirect = val.idup.parseURL;
+                tracef("redirect to %s detected", redirect);
+                break;
+            default:
+                break;
         }
     };
     http.perform;
+    if (redirect !is URL.init)
+    {
+        auto childPage = info.fetchHTML(redirect);
+        tracef("returning document from redirect: %s -> %s", u, redirect);
+        return childPage;
+    }
     auto data = ap.data;
+    tracef("have %s bytes of data from %s", data.length, u);
     if (Options.saveRawPath != "")
     {
         auto path = chainPath(Options.saveRawPath, u.path.baseName);
@@ -154,50 +169,31 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
 */
 Fic fetch(URL u)
 {
+    infof("grabbing %s", u);
     DownloadInfo info;
     Adapter adapter;
-    infof("%s series adapters", seriesAdapters.length);
     foreach (s; seriesAdapters)
     {
         if (!s.accepts(u)) continue;
 
         info.betweenDownloads = s.betweenDownloads;
-        auto seriesDoc = info.fetchHTML(u);
-        auto bookURLs = s.chapterURLs(seriesDoc.root, u);
-
+        auto seriesDoc = info.fetchHTML(u).root;
+        auto bookURLs = s.chapterURLs(seriesDoc, u);
         if (bookURLs.length == 0) continue;
+
+        string title = s.title(seriesDoc);
+        if (title.length == 0) title = seriesDoc.querySelector("title").innerText;
+        title = title.strip;
+
         Fic[] parts;
-        infof("book urls: %s", bookURLs);
-        infof("title: %s author: %s", s.title(seriesDoc.root), s.author(seriesDoc.root));
         foreach (url; bookURLs)
         {
-            //parts ~= fetch(url);
+            parts ~= fetch(url);
+            infof("series %s book %s found at %s with %s chapters", title,
+                    parts[$-1].title, url, parts[$-1].chapters.length);
         }
 
-        // Stitch them together into one book.
-        Fic stitched = new Fic;
-        stitched.author = s.author(seriesDoc.root);
-        stitched.title = s.title(seriesDoc.root);
-        stitched.slug = s.slug(seriesDoc.root);
-
-        foreach (part; parts)
-        {
-            if (stitched.author.length == 0) stitched.author = part.author;
-            if (stitched.slug.length == 0) stitched.slug = part.slug;
-            foreach (chapter; part.chapters)
-            {
-                chapter.title = part.title ~ " " ~ chapter.title;
-            }
-            stitched.chapters ~= part.chapters;
-            stitched.attachments ~= part.attachments;
-        }
-
-        if (stitched.title.length == 0)
-        {
-            stitched.title = seriesDoc.root.querySelector("title").innerText;
-        }
-
-        return stitched;
+        return stitchIntoOneBook(parts, s.author(seriesDoc), title, s.slug(seriesDoc));
     }
 
     foreach (a; allAdapters)
@@ -357,4 +353,58 @@ unittest
     assert(doc.querySelectorAll("div#bar").length == 1, "by tag and id failed");
     assert(doc.querySelectorAll("div#bar #inside_bar").length == 1, "nesting");
     assert(doc.querySelectorAll("option[selected]").length == 1, "selected");
+}
+
+Fic stitchIntoOneBook(Fic[] parts, string author, string title, string slug)
+{
+    auto stitched = new Fic;
+    stitched.author = author;
+    stitched.title = title;
+    stitched.slug = slug;
+    foreach (part; parts)
+    {
+        if (stitched.author.length == 0) stitched.author = part.author;
+        if (stitched.slug.length == 0) stitched.slug = part.slug;
+        foreach (chapter; part.chapters)
+        {
+            chapter.title = part.title ~ " " ~ chapter.title;
+        }
+        stitched.chapters ~= part.chapters;
+        stitched.attachments ~= part.attachments;
+    }
+
+    infof("assembled series %s with %s chapters total", stitched.title, stitched.chapters.length);
+
+    return stitched;
+}
+
+unittest
+{
+    Fic[] parts;
+    auto fic1 = new Fic;
+    fic1.author = "author1";
+    fic1.title = "title1";
+    fic1.chapters ~= new Episode;
+    fic1.chapters ~= new Episode;
+    fic1.chapters ~= new Episode;
+    fic1.chapters[0].title = "1";
+    fic1.chapters[1].title = "2";
+    fic1.chapters[2].title = "3";
+    auto fic2 = new Fic;
+    fic2.author = "author2";
+    fic2.title = "title2";
+    fic2.chapters ~= new Episode;
+    fic2.chapters ~= new Episode;
+    fic2.chapters ~= new Episode;
+    fic2.chapters[0].title = "1";
+    fic2.chapters[1].title = "2";
+    fic2.chapters[2].title = "3";
+    auto fic3 = stitchIntoOneBook([fic1, fic2], "author!", "title?", "slug");
+    assert(fic3.chapters.length == 6);
+    assert(fic3.chapters[0].title == "title1 1");
+    assert(fic3.chapters[1].title == "title1 2");
+    assert(fic3.chapters[2].title == "title1 3");
+    assert(fic3.chapters[3].title == "title2 1");
+    assert(fic3.chapters[4].title == "title2 2");
+    assert(fic3.chapters[5].title == "title2 3");
 }

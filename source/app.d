@@ -47,6 +47,8 @@ int main(string[] args)
 
         b.write(b.naturalTitle("html"));
         b.writeEpub(b.naturalTitle("epub"));
+        import std.stdio;
+        writefln("wrote ebooks to %s and %s", b.naturalTitle("html"), b.naturalTitle("epub"));
     }
     return 0;
 }

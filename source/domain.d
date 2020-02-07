@@ -80,9 +80,18 @@ class Fic
         f.close;
     }
 
-    void writeEpub(string filename)
+    void writeEpub(string filename, bool clobber = false)
     {
         static import epub;
+        {
+            import std.file;
+            auto basename = filename;
+            ulong i = 0;
+            while (exists(filename))
+            {
+                filename = format("%s %s", i, basename);
+            }
+        }
 
         alias EBook = epub.Book;
         alias EChap = epub.Chapter;

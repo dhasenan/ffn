@@ -55,10 +55,12 @@ class AO3Adapter : SimpleAdapter
 
     override Duration betweenDownloads()
     {
-        return dur!"msecs"(400);
+        // robots.txt
+        return 1.seconds;
     }
 }
 
+// This is an egregious abuse of a tool that was already on hand.
 class AO3SeriesAdapter : SimpleAdapter
 {
     this()
@@ -124,4 +126,10 @@ unittest
             parseURL("https://example.org/works/638102"),
             parseURL("https://example.org/works/775113"),
     ]);
+}
+
+unittest
+{
+    auto adapter = new AO3SeriesAdapter;
+    assert(adapter.accepts("https://archiveofourown.org/series/55639".parseURL));
 }
