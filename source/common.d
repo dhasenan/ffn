@@ -74,7 +74,7 @@ struct DownloadInfo
     Duration betweenDownloads;
 }
 
-private Document fetchHTML(ref DownloadInfo info, URL u)
+private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
 {
     auto base = u;
     base.fragment = null;
@@ -139,7 +139,8 @@ private Document fetchHTML(ref DownloadInfo info, URL u)
     http.perform;
     if (redirect !is URL.init)
     {
-        auto childPage = info.fetchHTML(redirect);
+        redirect = adapter.canonicalize(redirect);
+        auto childPage = info.fetchHTML(redirect, adapter);
         tracef("returning document from redirect: %s -> %s", u, redirect);
         return childPage;
     }
@@ -177,7 +178,7 @@ Fic fetch(URL u)
         if (!s.accepts(u)) continue;
 
         info.betweenDownloads = s.betweenDownloads;
-        auto seriesDoc = info.fetchHTML(u).root;
+        auto seriesDoc = info.fetchHTML(u, adapter).root;
         auto bookURLs = s.chapterURLs(seriesDoc, u);
         if (bookURLs.length == 0) continue;
 
@@ -211,7 +212,7 @@ Fic fetch(URL u)
     }
 
     info.betweenDownloads = adapter.betweenDownloads;
-    auto mainDoc = info.fetchHTML(u);
+    auto mainDoc = info.fetchHTML(u, adapter);
     Fic b = new Fic;
     b.url = u;
     b.author = adapter.author(mainDoc.root);
@@ -220,7 +221,7 @@ Fic fetch(URL u)
     auto urls = adapter.chapterURLs(mainDoc.root, u);
     foreach (url; urls)
     {
-        auto chapsDoc = info.fetchHTML(url);
+        auto chapsDoc = info.fetchHTML(url, adapter);
         tracef("fetched html for chapter at %s", url);
         auto chaps = adapter.chapters(chapsDoc.mainBody, u);
         tracef("found chapters: %s", chaps.length);

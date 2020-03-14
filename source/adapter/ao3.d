@@ -5,6 +5,7 @@ import arsd.dom;
 import core.time;
 import domain;
 import std.experimental.logger;
+import std.algorithm;
 import url;
 
 /// Adapter for archiveofourown.org
@@ -20,15 +21,25 @@ class AO3Adapter : SimpleAdapter
         super.slugSelector = "div.summary";
     }
 
+    override URL canonicalize(URL u)
+    {
+        u.queryParams.overwrite("view_adult", "true");
+        return u;
+    }
+
     override URL[] chapterURLs(Element doc, URL u)
     {
+        if (!u.path.canFind("chapters"))
+        {
+            u.path ~= "/chapters/";
+        }
         URL[] urls;
         auto s = doc.querySelector("select#selected_id");
         if (s !is null)
         {
             foreach (o; s.querySelectorAll("option"))
             {
-                urls ~= u.resolve(o.getAttribute("value"));
+                urls ~= canonicalize(u.resolve(o.getAttribute("value")));
             }
         }
         if (urls.length == 0)
@@ -77,6 +88,12 @@ class AO3SeriesAdapter : SimpleAdapter
         infof("trying to accept url %s: host: [%s] path: [%s]", u, u.host, u.path);
         return u.host.endsWith("archiveofourown.org")
             && u.path.startsWith("/series");
+    }
+
+    override URL canonicalize(URL u)
+    {
+        u.queryParams.overwrite("view_adult", "true");
+        return u;
     }
 
     override URL[] chapterURLs(Element doc, URL u)
