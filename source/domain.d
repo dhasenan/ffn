@@ -83,16 +83,6 @@ class Fic
     void writeEpub(string filename, bool clobber = false)
     {
         static import epub;
-        {
-            import std.file;
-            auto basename = filename;
-            ulong i = 0;
-            while (exists(filename))
-            {
-                filename = format("%s %s", i, basename);
-            }
-        }
-
         alias EBook = epub.Book;
         alias EChap = epub.Chapter;
         alias Cover = epub.Cover;

@@ -61,6 +61,11 @@ class AO3Adapter : SimpleAdapter
         {
             header.removeFromTree();
         }
+        header = e.querySelector("h3#work");
+        if (header !is null)
+        {
+            header.removeFromTree();
+        }
         return e;
     }
 
