@@ -244,8 +244,6 @@ Fic fetch(URL u)
 
 void fetchImages(ref Fic b)
 {
-    static ulong numImages = 0;
-
     import epub.books : Attachment;
     string[URL] urlToPath;
     foreach (episode; b.chapters)
@@ -298,7 +296,7 @@ void fetchImages(ref Fic b)
                 }
                 auto attachment = Attachment(
                     null,
-                    "image_" ~ numImages.to!string ~ suffix,
+                    "image_" ~ urlToPath.length.to!string ~ suffix,
                     mimeType,
                     appender.data);
                 urlToPath[src] = attachment.filename;

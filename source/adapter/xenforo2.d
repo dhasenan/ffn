@@ -43,7 +43,12 @@ class Xenforo2Adapter : Adapter
         infof("path fragment a: %s", s);
         s = s[0 .. s.indexOf('/')];
         infof("path fragment b: %s", s);
-        base.path = "/threads/" ~ s ~ "/reader/";
+        string trailing;
+        if (base.path.canFind("/reader/"))
+        {
+            trailing = base.path.split("/reader/")[$-1];
+        }
+        base.path = "/threads/" ~ s ~ "/reader/" ~ trailing;
         infof("canonicalized url: %s", base);
         return base;
     }
@@ -126,7 +131,8 @@ class Xenforo2Adapter : Adapter
 
     Duration betweenDownloads()
     {
-        return dur!"msecs"(250);
+        // respect robots.txt
+        return dur!"msecs"(6000);
     }
 
     void postprocess(Fic book)
