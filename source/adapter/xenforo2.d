@@ -143,4 +143,6 @@ class Xenforo2Adapter : Adapter
             chapter.content = chapter.content.querySelector("article.message-body");
         }
     }
+
+    bool useCfscrape() { return false; }
 }

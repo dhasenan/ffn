@@ -1,13 +1,24 @@
 {
-	"name": "ffn",
-	"description": "A minimal D application.",
-	"copyright": "Copyright © 2017, dhasenan",
-	"authors": ["dhasenan"],
+  "authors": [
+    "dhasenan"
+  ],
+  "copyright": "Copyright © 2017, dhasenan",
+  "dependencies": {
+    "arsd-official:dom": {
+      "path": "arsd",
+      "version": ">=0.0.0"
+    },
+    "epub": "~>1.1.2",
+    "pyd": "~>0.14.0",
+    "urld": "~>2.1.0"
+  },
+  "description": "A minimal D application.",
   "license": "MIT",
-	"dependencies": {
-		"urld": "~>2.1.0",
-		"arsd-official:dom": {"path": "arsd"},
-		"epub": "~>1.1.2"
-	},
-	"stringImportPaths": ["import"]
+  "name": "ffn",
+  "stringImportPaths": [
+    "import"
+  ],
+  "subConfigurations": {
+    "pyd": "python38"
+  }
 }

@@ -53,6 +53,9 @@ interface Adapter
 
     /// Do any fixups to finish off the book.
     void postprocess(Fic book);
+
+    /// Whether this adapter requires us to use a cloudflare-specific scraper.
+    bool useCfscrape();
 }
 
 /**
@@ -189,4 +192,6 @@ class SimpleAdapter : Adapter
     }
 
     void postprocess(Fic b) {}
+
+    bool useCfscrape() { return false; }
 }

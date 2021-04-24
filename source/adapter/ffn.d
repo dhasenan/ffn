@@ -104,8 +104,10 @@ class FFNAdapter : SimpleAdapter
 
     override Duration betweenDownloads()
     {
-        return 500.msecs;
+        return 5200.msecs;
     }
+
+    override bool useCfscrape() { return true; }
 }
 
 unittest
@@ -114,10 +116,10 @@ unittest
     import std.string : strip;
     auto adapter = new FFNAdapter;
     auto doc = new Document(import("ffntest-2020-01.html")).root;
-	assert(adapter.chapterTitle(doc).canFind("Exploiting the Horizon"));
-	assert(adapter.title(doc) == "Stygian Solace");
-	assert(adapter.author(doc) == "Uzumaki-sama");
-	assert(adapter.slug(doc).indexOf("By taking Riku's hand, Sora alters their destinies") >= 0);
+    assert(adapter.chapterTitle(doc).canFind("Exploiting the Horizon"));
+    assert(adapter.title(doc) == "Stygian Solace");
+    assert(adapter.author(doc) == "Uzumaki-sama");
+    assert(adapter.slug(doc).indexOf("By taking Riku's hand, Sora alters their destinies") >= 0);
     auto ch = adapter.chapterBody(doc);
     assert(ch.classes.canFind("storytext"));
     auto chBody = ch.innerText.strip;

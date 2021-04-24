@@ -158,6 +158,8 @@ class XenforoAdapter : Adapter
             chapter.content = chapter.content.querySelector("article");
         }
     }
+
+    bool useCfscrape() { return false; }
 }
 
 unittest

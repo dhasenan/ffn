@@ -37,11 +37,19 @@ Adapter[] allAdapters()
 {
     import adapter.ao3;
     import adapter.ffn;
+    import adapter.tth;
+    import adapter.wordpress;
     import adapter.xenforo;
     import adapter.xenforo2;
 
-    Adapter a = new XenforoAdapter;
-    return [new AO3Adapter, new FFNAdapter, a, new Xenforo2Adapter];
+    return [
+        cast(Adapter)new AO3Adapter,
+        new FFNAdapter,
+        new TTHAdapter,
+        new XenforoAdapter,
+        new Xenforo2Adapter,
+        new WordpressAdapter,
+    ];
 }
 
 int elemCmp(const Element a, const Element b)
@@ -74,25 +82,19 @@ struct DownloadInfo
     Duration betweenDownloads;
 }
 
-private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
+private Document fetchWithCurl(ref DownloadInfo info, URL u)
 {
-    auto base = u;
-    base.fragment = null;
-    if (auto p = base in info.downloaded)
-    {
-        return *p;
-    }
-    auto now = Clock.currTime(UTC());
-    auto next = info.lastDownload + info.betweenDownloads + Options.extraTimeBetweenChapters;
-    if (next > now)
-    {
-        auto d = next - now;
-        infof("sleeping %s for rate limit", d);
-        Thread.sleep(d);
-    }
     auto http = HTTP(u.toString);
-    http.setUserAgent("Windows / IE 11: Mozilla/5.0 " ~
-            "(Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
+    http.setUserAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:85.0) Gecko/20100101 Firefox/85.0");
+    http.addRequestHeader("Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+    http.addRequestHeader("Accept-Encoding", "gzip");
+    http.addRequestHeader("Accept-Language", "en-US,en;q=0.5");
+    http.addRequestHeader("Connection", "keep-alive");
+    http.addRequestHeader("DNT", "1");
+    http.addRequestHeader("Sec-GPC", "1");
+    http.addRequestHeader("Upgrade-Insecure-Requests", "1");
+    http.operationTimeout = 5.seconds;
     string charset;
     Appender!(ubyte[]) ap;
     bool gzip;
@@ -136,11 +138,12 @@ private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
                 break;
         }
     };
+    infof("http getting! from %s", u);
     http.perform;
+    infof("http gotten! %s bytes", ap.data.length);
     if (redirect !is URL.init)
     {
-        redirect = adapter.canonicalize(redirect);
-        auto childPage = info.fetchHTML(redirect, adapter);
+        auto childPage = info.fetchWithCurl(redirect);
         tracef("returning document from redirect: %s -> %s", u, redirect);
         return childPage;
     }
@@ -159,9 +162,53 @@ private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
     }
     auto doc = new Document;
     doc.parse(cast(string) data.idup, false, false, charset);
+    return doc;
+}
+
+Document fetchWithCfscrape(URL u)
+{
+    import pyd.pyd;
+    import pyd.embedded;
+    static bool initialized = false;
+    static PydObject cfscrape;
+    if (!initialized)
+    {
+        py_init;
+        initialized = true;
+        cfscrape = py_eval("create_scraper()", "cloudscraper");
+    }
+
+    auto text = cfscrape.getattr("get")(u.toString).getattr("content").to_d!string();
+    return new Document(text);
+}
+
+private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
+{
+    auto base = u;
+    base.fragment = null;
+    auto cachedFileName = "/tmp/ffn-cache/" ~ u.toString.replace("/", "");
+    if (exists(cachedFileName))
+    {
+        auto data = cachedFileName.readText;
+        return new Document(data);
+    }
+    if (auto p = base in info.downloaded)
+    {
+        return *p;
+    }
+    auto now = Clock.currTime(UTC());
+    auto next = info.lastDownload + info.betweenDownloads + Options.extraTimeBetweenChapters;
+    if (next > now)
+    {
+        auto d = next - now;
+        infof("sleeping %s for rate limit", d);
+        Thread.sleep(d);
+    }
+    auto doc = adapter.useCfscrape ? fetchWithCfscrape(u) : fetchWithCurl(info, u);
 
     info.downloaded[base] = doc;
     info.lastDownload = Clock.currTime(UTC());
+    write(cachedFileName, doc.toString);
     return doc;
 }
 
@@ -171,6 +218,7 @@ private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
 Fic fetch(URL u)
 {
     infof("grabbing %s", u);
+    mkdirRecurse("/tmp/ffn-cache");
     DownloadInfo info;
     Adapter adapter;
     foreach (s; seriesAdapters)
@@ -199,10 +247,12 @@ Fic fetch(URL u)
 
     foreach (a; allAdapters)
     {
+        infof("trying adapter %s", a);
         if (a.accepts(u))
         {
             adapter = a;
             u = adapter.canonicalize(u);
+            infof("adapter %s selected; new url: %s", a, u);
             break;
         }
     }
@@ -212,7 +262,9 @@ Fic fetch(URL u)
     }
 
     info.betweenDownloads = adapter.betweenDownloads;
+    infof("about to grab main file %s", u);
     auto mainDoc = info.fetchHTML(u, adapter);
+    infof("got main file");
     Fic b = new Fic;
     b.url = u;
     b.author = adapter.author(mainDoc.root);
@@ -225,10 +277,14 @@ Fic fetch(URL u)
         tracef("fetched html for chapter at %s", url);
         auto chaps = adapter.chapters(chapsDoc.mainBody, u);
         tracef("found chapters: %s", chaps.length);
-        foreach (chapter; chaps)
+        foreach (i, chapter; chaps)
         {
             chapter.url = url;
-            chapter.title = adapter.chapterTitle(chapter.content);
+            chapter.title = adapter.chapterTitle(chapter.content).strip;
+            if (!chapter.title)
+            {
+                chapter.title = "Chapter %s".format(i + 1);
+            }
             // TODO filters (curly quotes, mote-it-not, etc)
             chapter.content.clean;
             b.chapters ~= chapter;
