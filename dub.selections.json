@@ -3,10 +3,10 @@
 	"versions": {
 		"arsd-official": {"path":"arsd"},
 		"checkedint_andralex": "0.0.8",
-		"epub": "1.1.2",
+		"epub": "1.2.0",
 		"gen-package-version": "1.0.5",
 		"gtk-d": "3.7.5",
-		"pyd": "0.14.0",
+		"pyd": "0.14.1",
 		"scriptlike": "0.9.7",
 		"urld": "2.1.1"
 	}

@@ -101,7 +101,7 @@ class Fic
     </head>
     <body>
         <h1 class="bookTitle">%1$s</h1>
-        <h2 class="author">%2$s</h1>
+        <h2 class="author">%2$s</h2>
         <div class="slug">%3$s</div>
     </body>
 </html>`,
@@ -133,10 +133,11 @@ class Fic
         eb.id = randomUUID.toString;
 
         enum VERSION = "1.0.0";
-        Cover cover = {
-          generator: "ffn-" ~ VERSION,
-          book: eb,
-        };
+        /*
+        auto cover = new Cover;
+        cover.generator = generator: "ffn-" ~ VERSION;
+        book.cover = cover;
+        */
         //eb.coverImage = epub.render(cover);
         tracef("sending to epub generator");
         epub.toEpub(eb, filename);

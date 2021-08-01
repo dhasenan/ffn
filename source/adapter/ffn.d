@@ -23,6 +23,7 @@ class FFNAdapter : SimpleAdapter
         super.chapterTitleSelector = "select#chap_select option[selected]";
         super.slugSelector = "#profile_top div.xcontrast_txt";
         super.chapterBodySelector = "div.storytextp div.storytext";
+        super.adapterName = "ffn";
     }
 
     override string chapterTitle(Element doc)

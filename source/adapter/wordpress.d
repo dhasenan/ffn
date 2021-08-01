@@ -21,6 +21,7 @@ class WordpressAdapter : SimpleAdapter
         super.authorSelector = "span.author";
         super.titleSelector = "h1.site-title";
         super.chapterTitleSelector = "h3.title";
+        super.adapterName = "wordpress";
         tocRegex = regex("table-of-contents");
     }
 
@@ -36,6 +37,7 @@ class WordpressAdapter : SimpleAdapter
         if (!e)
         {
             errorf("failed to find entry at %s", u);
+            return null;
         }
         auto results = e.querySelectorAll("a")
             .map!(e => e.getAttribute("href"))

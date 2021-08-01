@@ -56,6 +56,12 @@ interface Adapter
 
     /// Whether this adapter requires us to use a cloudflare-specific scraper.
     bool useCfscrape();
+
+    /// Whether this adapter is a series-style adapter. Really ugly hack.
+    bool isSeries();
+
+    /// The name of this adapter
+    string name();
 }
 
 /**
@@ -76,6 +82,7 @@ class SimpleAdapter : Adapter
         string slugSelector;
         string chapterTitleSelector;
         string chapterBodySelector;
+        string adapterName;
     }
 
     bool accepts(URL u)
@@ -194,4 +201,6 @@ class SimpleAdapter : Adapter
     void postprocess(Fic b) {}
 
     bool useCfscrape() { return false; }
+    bool isSeries() { return false; }
+    string name() { return this.adapterName; }
 }

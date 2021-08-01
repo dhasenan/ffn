@@ -29,7 +29,7 @@ class Xenforo2Adapter : Adapter
 
     bool accepts(URL u)
     {
-        return u.host.endsWith("sufficientvelocity.com");
+        return u.host.endsWith("spacebattles.com") || u.host.endsWith("sufficientvelocity.com");
     }
 
     URL canonicalize(URL u)
@@ -145,4 +145,7 @@ class Xenforo2Adapter : Adapter
     }
 
     bool useCfscrape() { return false; }
+
+    bool isSeries() { return false; }
+    string name() { return "xenforo2"; }
 }

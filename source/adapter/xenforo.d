@@ -26,7 +26,8 @@ class XenforoAdapter : Adapter
 {
     bool accepts(URL u)
     {
-        return u.host.endsWith("spacebattles.com");
+        //return u.host.endsWith("spacebattles.com");
+        return false;
     }
 
     URL canonicalize(URL u)
@@ -160,6 +161,9 @@ class XenforoAdapter : Adapter
     }
 
     bool useCfscrape() { return false; }
+
+    bool isSeries() { return false; }
+    string name() { return "xenforo"; }
 }
 
 unittest

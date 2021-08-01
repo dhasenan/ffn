@@ -19,6 +19,7 @@ class AO3Adapter : SimpleAdapter
         super.titleSelector = "h2.title";
         super.chapterTitleSelector = "h3.title";
         super.slugSelector = "div.summary";
+        super.adapterName = "ao3";
     }
 
     override URL canonicalize(URL u)
@@ -85,6 +86,7 @@ class AO3SeriesAdapter : SimpleAdapter
         super.authorSelector = "a[rel=author]";
         super.titleSelector = "h2.heading";
         super.slugSelector = "blockquote.userstuff";
+        super.adapterName = "ao3-series";
     }
 
     override bool accepts(URL u)

@@ -24,6 +24,7 @@ class TTHAdapter : SimpleAdapter
         super.chapterTitleSelector = "h3";
         super.slugSelector = "div.storysummary p";
         super.chapterBodySelector = "div.storybody";
+        super.adapterName = "tth";
     }
 
     /*

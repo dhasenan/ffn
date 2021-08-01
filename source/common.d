@@ -1,6 +1,7 @@
 module common;
 
 import adapter.core;
+import cleaner;
 import domain;
 
 import core.thread;
@@ -25,6 +26,7 @@ struct Options
 static:
     string saveRawPath = null;
     Duration extraTimeBetweenChapters = 0.seconds;
+    string adapterName = null;
 }
 
 Adapter[] seriesAdapters()
@@ -52,18 +54,11 @@ Adapter[] allAdapters()
     ];
 }
 
-int elemCmp(const Element a, const Element b)
-{
-    int aa = cast(int) cast(void*) a;
-    int bb = cast(int) cast(void*) b;
-    return aa - bb;
-}
-
 void clean(Element elem)
 {
-    import std.container.rbtree;
+    import std.container.dlist;
 
-    auto queue = new RedBlackTree!(Element, elemCmp, false);
+    auto queue = new DList!Element;
     queue.insert(elem);
 
     while (!queue.empty)
@@ -182,7 +177,7 @@ Document fetchWithCfscrape(URL u)
     return new Document(text);
 }
 
-private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
+private Document fetchHTML(ref DownloadInfo info, URL u, bool cloudflare)
 {
     auto base = u;
     base.fragment = null;
@@ -204,12 +199,63 @@ private Document fetchHTML(ref DownloadInfo info, URL u, Adapter adapter)
         infof("sleeping %s for rate limit", d);
         Thread.sleep(d);
     }
-    auto doc = adapter.useCfscrape ? fetchWithCfscrape(u) : fetchWithCurl(info, u);
+    auto doc = cloudflare ? fetchWithCfscrape(u) : fetchWithCurl(info, u);
 
     info.downloaded[base] = doc;
     info.lastDownload = Clock.currTime(UTC());
     write(cachedFileName, doc.toString);
     return doc;
+}
+
+Adapter detectAdapter(URL u, ref DownloadInfo info)
+{
+    import std.uni : icmp;
+    if (Options.adapterName)
+    {
+        foreach (s; seriesAdapters ~ allAdapters)
+        {
+            if (icmp(Options.adapterName, s.name) == 0)
+            {
+                return s;
+            }
+        }
+    }
+    foreach (s; seriesAdapters ~ allAdapters)
+    {
+        if (s.accepts(u)) return s;
+    }
+    Document doc;
+    try
+    {
+        doc = info.fetchHTML(u, false);
+    }
+    catch (Exception e)
+    {
+        try
+        {
+            doc = info.fetchHTML(u, true);
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
+    }
+    foreach (s; allAdapters)
+    {
+        try
+        {
+            auto a = s.chapterURLs(doc.root, u);
+            if (a.length > 1)
+            {
+                return s;
+            }
+        }
+        catch (Exception e)
+        {
+            // ok
+        }
+    }
+    return null;
 }
 
 /**
@@ -220,17 +266,24 @@ Fic fetch(URL u)
     infof("grabbing %s", u);
     mkdirRecurse("/tmp/ffn-cache");
     DownloadInfo info;
-    Adapter adapter;
-    foreach (s; seriesAdapters)
+    auto adapter = detectAdapter(u, info);
+    if (!adapter)
     {
-        if (!s.accepts(u)) continue;
+        throw new NoAdapterException("no matching adapter for " ~ u.toString);
+    }
+    info.betweenDownloads = adapter.betweenDownloads;
 
-        info.betweenDownloads = s.betweenDownloads;
-        auto seriesDoc = info.fetchHTML(u, adapter).root;
-        auto bookURLs = s.chapterURLs(seriesDoc, u);
-        if (bookURLs.length == 0) continue;
+    if (adapter.isSeries)
+    {
+        auto tmp = Options.adapterName;
+        scope (exit) Options.adapterName = tmp;
+        Options.adapterName = null;
 
-        string title = s.title(seriesDoc);
+        auto seriesDoc = info.fetchHTML(u, adapter.useCfscrape).root;
+        auto bookURLs = adapter.chapterURLs(seriesDoc, u);
+        if (bookURLs.length == 0) return null;
+
+        string title = adapter.title(seriesDoc);
         if (title.length == 0) title = seriesDoc.querySelector("title").innerText;
         title = title.strip;
 
@@ -242,38 +295,25 @@ Fic fetch(URL u)
                     parts[$-1].title, url, parts[$-1].chapters.length);
         }
 
-        return stitchIntoOneBook(parts, s.author(seriesDoc), title, s.slug(seriesDoc));
+        return stitchIntoOneBook(parts, adapter.author(seriesDoc), title, adapter.slug(seriesDoc));
     }
 
-    foreach (a; allAdapters)
-    {
-        infof("trying adapter %s", a);
-        if (a.accepts(u))
-        {
-            adapter = a;
-            u = adapter.canonicalize(u);
-            infof("adapter %s selected; new url: %s", a, u);
-            break;
-        }
-    }
-    if (adapter is null)
-    {
-        throw new NoAdapterException("no adapter for url " ~ u.toHumanReadableString);
-    }
-
-    info.betweenDownloads = adapter.betweenDownloads;
-    infof("about to grab main file %s", u);
-    auto mainDoc = info.fetchHTML(u, adapter);
+    infof("about to grab main file %s with adapter %s", u, adapter);
+    auto mainDoc = info.fetchHTML(u, adapter.useCfscrape);
     infof("got main file");
     Fic b = new Fic;
     b.url = u;
     b.author = adapter.author(mainDoc.root);
     b.title = adapter.title(mainDoc.root);
+    if (b.title.length == 0)
+    {
+        b.title = "Unknown";
+    }
     b.slug = adapter.slug(mainDoc.root);
     auto urls = adapter.chapterURLs(mainDoc.root, u);
     foreach (url; urls)
     {
-        auto chapsDoc = info.fetchHTML(url, adapter);
+        auto chapsDoc = info.fetchHTML(url, adapter.useCfscrape);
         tracef("fetched html for chapter at %s", url);
         auto chaps = adapter.chapters(chapsDoc.mainBody, u);
         tracef("found chapters: %s", chaps.length);
