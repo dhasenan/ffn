@@ -7,10 +7,16 @@ import core.time;
 import std.experimental.logger;
 import std.getopt;
 
+
 import url;
 
 int main(string[] args)
 {
+    version (linux)
+    {
+        import etc.linux.memoryerror : registerMemoryErrorHandler;
+        registerMemoryErrorHandler;
+    }
     double delay = 0;
     bool verbose = false;
     bool listAdapters;

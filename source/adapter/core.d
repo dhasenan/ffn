@@ -76,7 +76,7 @@ class SimpleAdapter : Adapter
     {
         string acceptedDomain;
         string chapterURLSelector;
-        string chapterURLAttribute;
+        string chapterURLAttribute = "href";
         string titleSelector;
         string authorSelector;
         string slugSelector;
@@ -113,7 +113,10 @@ class SimpleAdapter : Adapter
             URL u2;
             if (tryParseURL(unparsed, u2))
             {
-                urls ~= u2;
+                if (u2.host)
+                    urls ~= u2;
+                else
+                    urls ~= u.resolve(unparsed);
             }
             else
             {
@@ -203,4 +206,6 @@ class SimpleAdapter : Adapter
     bool useCfscrape() { return false; }
     bool isSeries() { return false; }
     string name() { return this.adapterName; }
+
+    bool manuallyDownloadMainFile()
 }

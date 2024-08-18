@@ -32,8 +32,12 @@ class WordpressAdapter : SimpleAdapter
 
     override URL[] chapterURLs(Element doc, URL u)
     {
-        Element e = doc.querySelector("div.entry-wrapper");
-        if (!e) e = doc.querySelector("div.entry-content");
+        Element e;
+        foreach (selector; ["div.content", "div.entry-wrapper", "div.entry-content"])
+        {
+            e = doc.querySelector(selector);
+            if (e) break;
+        }
         if (!e)
         {
             errorf("failed to find entry at %s", u);

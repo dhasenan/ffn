@@ -11,3 +11,5 @@ ffn
 ffn-test-library
 elibroj
 tmp
+*.epub
+*.html

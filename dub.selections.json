@@ -1,12 +1,12 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"arsd-official": {"path":"arsd"},
+		"arsd-official": "10.8.4",
 		"checkedint_andralex": "0.0.8",
 		"epub": "1.2.0",
 		"gen-package-version": "1.0.5",
 		"gtk-d": "3.7.5",
-		"pyd": "0.14.1",
+		"pyd": "0.14.3",
 		"scriptlike": "0.9.7",
 		"urld": "2.1.1"
 	}

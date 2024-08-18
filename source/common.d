@@ -39,6 +39,7 @@ Adapter[] allAdapters()
 {
     import adapter.ao3;
     import adapter.ffn;
+    import adapter.royalroad;
     import adapter.tth;
     import adapter.wordpress;
     import adapter.xenforo;
@@ -47,10 +48,11 @@ Adapter[] allAdapters()
     return [
         cast(Adapter)new AO3Adapter,
         new FFNAdapter,
+        new RoyalRoadAdapter,
         new TTHAdapter,
+        new WordpressAdapter,
         new XenforoAdapter,
         new Xenforo2Adapter,
-        new WordpressAdapter,
     ];
 }
 
@@ -160,32 +162,18 @@ private Document fetchWithCurl(ref DownloadInfo info, URL u)
     return doc;
 }
 
-Document fetchWithCfscrape(URL u)
-{
-    import pyd.pyd;
-    import pyd.embedded;
-    static bool initialized = false;
-    static PydObject cfscrape;
-    if (!initialized)
-    {
-        py_init;
-        initialized = true;
-        cfscrape = py_eval("create_scraper()", "cloudscraper");
-    }
-
-    auto text = cfscrape.getattr("get")(u.toString).getattr("content").to_d!string();
-    return new Document(text);
-}
-
 private Document fetchHTML(ref DownloadInfo info, URL u, bool cloudflare)
 {
     auto base = u;
     base.fragment = null;
-    auto cachedFileName = "/tmp/ffn-cache/" ~ u.toString.replace("/", "");
-    if (exists(cachedFileName))
+    version (fsCache)
     {
-        auto data = cachedFileName.readText;
-        return new Document(data);
+        auto cachedFileName = "/tmp/ffn-cache/" ~ u.toString.replace("/", "");
+        if (exists(cachedFileName))
+        {
+            auto data = cachedFileName.readText;
+            return new Document(data);
+        }
     }
     if (auto p = base in info.downloaded)
     {
@@ -199,11 +187,11 @@ private Document fetchHTML(ref DownloadInfo info, URL u, bool cloudflare)
         infof("sleeping %s for rate limit", d);
         Thread.sleep(d);
     }
-    auto doc = cloudflare ? fetchWithCfscrape(u) : fetchWithCurl(info, u);
+    auto doc = fetchWithCurl(info, u);
 
     info.downloaded[base] = doc;
     info.lastDownload = Clock.currTime(UTC());
-    write(cachedFileName, doc.toString);
+    version (fsCache) write(cachedFileName, doc.toString);
     return doc;
 }
 
@@ -271,6 +259,7 @@ Fic fetch(URL u)
     {
         throw new NoAdapterException("no matching adapter for " ~ u.toString);
     }
+    u = adapter.canonicalize(u);
     info.betweenDownloads = adapter.betweenDownloads;
 
     if (adapter.isSeries)
@@ -315,16 +304,15 @@ Fic fetch(URL u)
     {
         auto chapsDoc = info.fetchHTML(url, adapter.useCfscrape);
         tracef("fetched html for chapter at %s", url);
-        auto chaps = adapter.chapters(chapsDoc.mainBody, u);
+        auto chaps = adapter.chapters(chapsDoc.root, u);
         tracef("found chapters: %s", chaps.length);
         foreach (i, chapter; chaps)
         {
             chapter.url = url;
-            chapter.title = adapter.chapterTitle(chapter.content).strip;
-            if (!chapter.title)
-            {
+            if (chapter.title.length == 0)
+                chapter.title = adapter.chapterTitle(chapter.content).strip;
+            if (chapter.title.length == 0)
                 chapter.title = "Chapter %s".format(i + 1);
-            }
             // TODO filters (curly quotes, mote-it-not, etc)
             chapter.content.clean;
             b.chapters ~= chapter;
