@@ -27,6 +27,9 @@ static:
     string saveRawPath = null;
     Duration extraTimeBetweenChapters = 0.seconds;
     string adapterName = null;
+    string title = null;
+    string author = null;
+    string chapterListFile = null;
 }
 
 Adapter[] seriesAdapters()
@@ -246,6 +249,65 @@ Adapter detectAdapter(URL u, ref DownloadInfo info)
     return null;
 }
 
+Fic fetchFromChapterList()
+{
+    auto b = new Fic;
+    b.title = Options.title;
+    b.author = Options.author;
+    URL[] urls;
+    try
+    {
+        urls = Options.chapterListFile.readText.split("\n")
+            .filter!(x => x.length > 0)
+            .map!parseURL
+            .array;
+    }
+    catch (Exception e)
+    {
+        throw new Exception("failed to read URLs from file", e);
+    }
+    if (urls.length == 0)
+    {
+        throw new Exception("no URLs in file " ~ Options.chapterListFile);
+    }
+
+    DownloadInfo info;
+    auto adapter = detectAdapter(urls[0], info);
+    if (!adapter)
+    {
+        import adp = adapter.wordpress;
+        adapter = new adp.WordpressAdapter;
+    }
+
+    finishFetching(adapter, b, urls);
+    return b;
+}
+
+void finishFetching(Adapter adapter, Fic b, URL[] urls)
+{
+    DownloadInfo info;
+    foreach (url; urls)
+    {
+        auto chapsDoc = info.fetchHTML(url, adapter.useCfscrape);
+        tracef("fetched html for chapter at %s", url);
+        auto chaps = adapter.chapters(chapsDoc.root, url);
+        tracef("found chapters: %s", chaps.length);
+        foreach (i, chapter; chaps)
+        {
+            chapter.url = url;
+            if (chapter.title.length == 0)
+                chapter.title = adapter.chapterTitle(chapter.content).strip;
+            if (chapter.title.length == 0)
+                chapter.title = "Chapter %s".format(i + 1);
+            // TODO filters (curly quotes, mote-it-not, etc)
+            chapter.content.clean;
+            b.chapters ~= chapter;
+        }
+    }
+    adapter.postprocess(b);
+    fetchImages(b);
+}
+
 /**
     Fetch the book using the given adapter.
 */
@@ -300,29 +362,7 @@ Fic fetch(URL u)
     }
     b.slug = adapter.slug(mainDoc.root);
     auto urls = adapter.chapterURLs(mainDoc.root, u);
-    foreach (url; urls)
-    {
-        auto chapsDoc = info.fetchHTML(url, adapter.useCfscrape);
-        tracef("fetched html for chapter at %s", url);
-        auto chaps = adapter.chapters(chapsDoc.root, u);
-        tracef("found chapters: %s", chaps.length);
-        foreach (i, chapter; chaps)
-        {
-            chapter.url = url;
-            if (chapter.title.length == 0)
-                chapter.title = adapter.chapterTitle(chapter.content).strip;
-            if (chapter.title.length == 0)
-                chapter.title = "Chapter %s".format(i + 1);
-            // TODO filters (curly quotes, mote-it-not, etc)
-            chapter.content.clean;
-            b.chapters ~= chapter;
-        }
-    }
-    adapter.postprocess(b);
-    tracef("finished book text; got %s chapters", b.chapters.length);
-
-    fetchImages(b);
-
+    finishFetching(adapter, b, urls);
     return b;
 }
 

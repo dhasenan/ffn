@@ -25,6 +25,9 @@ int main(string[] args)
         "d|delay", "seconds of extra delay between downloads", &delay,
         "v|verbose", "print verbose logging information", &verbose,
         "a|adapter", "which adapter to use", &Options.adapterName,
+        "chapter-list", "file containing a list of chapters", &Options.chapterListFile,
+        "title", "title (overrides autodetection)", &Options.title,
+        "author", "author (overrides autodetection)", &Options.author,
         "list-adapters", "list the available adapters", &listAdapters);
     if (opts.helpWanted)
     {
@@ -51,6 +54,13 @@ int main(string[] args)
         globalLogLevel = LogLevel.warning;
     }
 
+    if (Options.chapterListFile)
+    {
+        Fic b = fetchFromChapterList();
+        writeFic(b);
+        return 0;
+    }
+
     foreach (arg; args[1 .. $])
     {
         Fic b;
@@ -62,11 +72,15 @@ int main(string[] args)
         {
             errorf("error downloading book %s: %s", arg, e);
         }
-
-        b.write(b.naturalTitle("html"));
-        b.writeEpub(b.naturalTitle("epub"));
-        import std.stdio;
-        writefln("wrote ebooks to %s and %s", b.naturalTitle("html"), b.naturalTitle("epub"));
+        writeFic(b);
     }
     return 0;
+}
+
+void writeFic(Fic b)
+{
+    b.write(b.naturalTitle("html"));
+    b.writeEpub(b.naturalTitle("epub"));
+    import std.stdio;
+    writefln("wrote ebooks to %s and %s", b.naturalTitle("html"), b.naturalTitle("epub"));
 }

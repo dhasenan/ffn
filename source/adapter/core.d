@@ -206,6 +206,4 @@ class SimpleAdapter : Adapter
     bool useCfscrape() { return false; }
     bool isSeries() { return false; }
     string name() { return this.adapterName; }
-
-    bool manuallyDownloadMainFile()
 }
